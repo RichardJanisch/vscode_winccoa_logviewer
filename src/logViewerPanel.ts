@@ -10,6 +10,7 @@ export class LogViewerPanel {
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
     private _watcher: LogFileWatcher | undefined;
+    private _currentLogPath: string | undefined;
 
     // ---------- Factory ----------
     public static createOrShow(extensionUri: vscode.Uri, logPath?: string) {
@@ -122,6 +123,12 @@ export class LogViewerPanel {
     public async startWatching(logPath: string): Promise<void> {
         logger.info('Starting to watch log directory', { logPath });
         
+        // Check if already watching this path
+        if (this._currentLogPath === logPath && this._watcher) {
+            logger.debug('Already watching this path', { logPath });
+            return;
+        }
+        
         // Stop existing watcher if any
         if (this._watcher) {
             logger.debug('Stopping existing watcher');
@@ -139,9 +146,11 @@ export class LogViewerPanel {
 
             await this._watcher.start();
             
+            this._currentLogPath = logPath;
             logger.info('Successfully started watching logs', { logPath });
             vscode.window.showInformationMessage(`Watching logs in: ${logPath}`);
         } catch (error) {
+            this._currentLogPath = undefined;
             logger.error('Failed to start watching logs', error, { logPath });
             vscode.window.showErrorMessage(`Failed to watch logs: ${error}`);
         }

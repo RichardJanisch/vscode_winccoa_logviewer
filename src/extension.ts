@@ -1,24 +1,7 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as os from 'os';
 import { LogViewerPanel } from './logViewerPanel';
 import { logger } from './logger';
-
-/**
- * Get default log path for testing
- * TODO: Replace with npm package for project info
- */
-function getDefaultLogPath(): string {
-    const isWindows = os.platform() === 'win32';
-    
-    if (isWindows) {
-        // Windows path - adjust drive letter as needed
-        return 'C:\\wincc_proj\\DevEnv\\DevEnv\\log';
-    } else {
-        // Linux/Unix path
-        return '/home/testus/wincc_proj/DevEnv/DevEnv/log';
-    }
-}
+import { PathResolver } from './pathResolver';
 
 export function activate(context: vscode.ExtensionContext) {
     // Initialize logger
@@ -39,6 +22,21 @@ export function activate(context: vscode.ExtensionContext) {
                 logger.updateLogLevel();
                 logger.info('Log level updated');
             }
+            
+            // Handle log path configuration changes
+            if (e.affectsConfiguration('winccoaLogviewer.logPathSource') || 
+                e.affectsConfiguration('winccoaLogviewer.staticLogPath')) {
+                logger.info('Log path configuration changed');
+                
+                // If panel is open, update it with new path
+                if (LogViewerPanel.currentPanel) {
+                    const newPath = PathResolver.getLogPath();
+                    if (newPath) {
+                        logger.info('Updating active panel with new log path', { path: newPath });
+                        LogViewerPanel.currentPanel.startWatching(newPath);
+                    }
+                }
+            }
         })
     );
 
@@ -50,8 +48,14 @@ export function activate(context: vscode.ExtensionContext) {
     const openLogViewerCommand = vscode.commands.registerCommand(
         'winccoa-logviewer.open',
         (logPath?: string) => {
-            // Use provided logPath or fall back to default
-            const resolvedPath = logPath || getDefaultLogPath();
+            // Use provided logPath or resolve from configuration
+            const resolvedPath = logPath || PathResolver.getLogPath();
+            
+            if (!resolvedPath) {
+                logger.warn('Cannot open LogViewer: no valid log path');
+                return;
+            }
+            
             logger.info('Opening LogViewer', { logPath: resolvedPath });
             LogViewerPanel.createOrShow(context.extensionUri, resolvedPath);
         }
