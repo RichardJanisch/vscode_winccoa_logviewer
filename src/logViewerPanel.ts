@@ -96,6 +96,10 @@ export class LogViewerPanel {
                         logger.info('Setting paused state', { paused: message.paused });
                         this.setPaused(message.paused);
                         return;
+                    case 'openSettings':
+                        logger.info('Opening extension settings');
+                        this._openSettings();
+                        return;
                 }
             },
             null,
@@ -181,6 +185,14 @@ export class LogViewerPanel {
             logger.error('Failed to open file', error, { filePath, line });
             vscode.window.showErrorMessage(`Could not open file: ${filePath}`);
         }
+    }
+
+    /**
+     * Open extension settings
+     */
+    private _openSettings() {
+        logger.info('Opening settings for winccoaLogviewer');
+        vscode.commands.executeCommand('workbench.action.openSettings', 'winccoaLogviewer');
     }
 
     private _update() {

@@ -8,6 +8,8 @@ import {
   vsCodeCheckbox,
   vsCodeBadge,
   vsCodeDivider,
+  vsCodeDropdown,
+  vsCodeOption,
 } from '@vscode/webview-ui-toolkit';
 
 // TypeScript declaration for VSCode Web Components
@@ -19,6 +21,8 @@ declare global {
       'vscode-checkbox': any;
       'vscode-badge': any;
       'vscode-divider': any;
+      'vscode-dropdown': any;
+      'vscode-option': any;
     }
   }
   function acquireVsCodeApi(): any;
@@ -30,7 +34,9 @@ provideVSCodeDesignSystem().register(
   vsCodeTextField(),
   vsCodeCheckbox(),
   vsCodeBadge(),
-  vsCodeDivider()
+  vsCodeDivider(),
+  vsCodeDropdown(),
+  vsCodeOption()
 );
 
 interface ColumnVisibility {
@@ -52,6 +58,7 @@ interface ColumnWidths {
 function App() {
   const [allLogs, setAllLogs] = useState<LogEvent[]>([]);
   const [isPaused, setIsPaused] = useState(false);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
 
   // Toggle pause state and notify extension
   const togglePause = () => {
@@ -62,6 +69,16 @@ function App() {
       vscode.postMessage({
         command: 'setPaused',
         paused: newPausedState
+      });
+    }
+  };
+
+  // Open settings
+  const handleOpenSettings = () => {
+    setShowSettingsDropdown(false);
+    if (vscode) {
+      vscode.postMessage({
+        command: 'openSettings'
       });
     }
   };
@@ -372,6 +389,70 @@ function App() {
           <span style={{ fontSize: '11px', opacity: 0.6, whiteSpace: 'nowrap' }}>
             {filteredLogs.length} / {allLogs.length}
           </span>
+
+          {/* Settings Button with Dropdown */}
+          <div style={{ position: 'relative' }}>
+            {/* @ts-ignore */}
+            <vscode-button 
+              onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+              appearance="icon"
+              aria-label="Settings"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+              </svg>
+            {/* @ts-ignore */}
+            </vscode-button>
+
+            {/* Dropdown Menu */}
+            {showSettingsDropdown && (
+              <>
+                <div 
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 999
+                  }}
+                  onClick={() => setShowSettingsDropdown(false)}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '32px',
+                    right: 0,
+                    backgroundColor: 'var(--vscode-menu-background)',
+                    border: '1px solid var(--vscode-menu-border)',
+                    borderRadius: '3px',
+                    padding: '4px',
+                    zIndex: 1000,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                    minWidth: '180px'
+                  }}
+                >
+                  <div
+                    onClick={handleOpenSettings}
+                    style={{
+                      padding: '6px 8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      borderRadius: '2px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--vscode-menu-selectionBackground)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    Open Settings
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
