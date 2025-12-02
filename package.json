@@ -1,0 +1,48 @@
+{
+  "name": "winccoa-logviewer",
+  "displayName": "WinCC OA LogViewer",
+  "description": "LogViewer for WinCC OA - View and analyze log files in real-time",
+  "version": "0.0.1",
+  "publisher": "winccoa-tools",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/winccoa_vscode_tools"
+  },
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:winccoa-logviewer.open"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "winccoa-logviewer.open",
+        "title": "Open WinCC OA LogViewer",
+        "category": "WinCC OA"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "npm run build:webview && tsc -p ./",
+    "build:webview": "cd webview && npm run build",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.x",
+    "@types/vscode": "^1.105.0",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "@vscode/vsce": "^3.7.0",
+    "eslint": "^9.36.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {}
+}
