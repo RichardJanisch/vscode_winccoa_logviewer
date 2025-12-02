@@ -1,4 +1,5 @@
 import { LogEvent, LogSeverity, LogMetadata, StacktraceEntry } from './logEvent';
+import { logger } from './logger';
 
 /**
  * Parses WinCC OA PVSS_II.log format
@@ -32,6 +33,11 @@ export class LogParser {
                 const completed = this.finalizeEvent();
                 if (completed) {
                     completedEvents.push(completed);
+                    logger.debug('Completed log event', { 
+                        identifier: completed.identifier, 
+                        severity: completed.severity,
+                        hasMetadata: !!completed.metadata 
+                    });
                 }
             }
 
@@ -68,6 +74,7 @@ export class LogParser {
         const match = line.match(regex);
 
         if (!match) {
+            logger.debug('Failed to parse as main line', { linePreview: line.substring(0, 50) });
             return null;
         }
 

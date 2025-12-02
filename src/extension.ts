@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
 import { LogViewerPanel } from './logViewerPanel';
+import { logger } from './logger';
 
 /**
  * Get default log path for testing
@@ -20,7 +21,26 @@ function getDefaultLogPath(): string {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('WinCC OA LogViewer Extension activated');
+    // Initialize logger
+    logger.initialize();
+    
+    // Register output channel
+    const outputChannel = logger.getOutputChannel();
+    if (outputChannel) {
+        context.subscriptions.push(outputChannel);
+    }
+    
+    logger.info('WinCC OA LogViewer Extension activated');
+
+    // Watch for configuration changes
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('winccoaLogviewer.logLevel')) {
+                logger.updateLogLevel();
+                logger.info('Log level updated');
+            }
+        })
+    );
 
     // Register the command to open the LogViewer
     // This command can be called from:
@@ -32,13 +52,16 @@ export function activate(context: vscode.ExtensionContext) {
         (logPath?: string) => {
             // Use provided logPath or fall back to default
             const resolvedPath = logPath || getDefaultLogPath();
+            logger.info('Opening LogViewer', { logPath: resolvedPath });
             LogViewerPanel.createOrShow(context.extensionUri, resolvedPath);
         }
     );
 
     context.subscriptions.push(openLogViewerCommand);
+    
+    // Note: Logger disposal is handled by output channel subscription
 }
 
 export function deactivate() {
-    console.log('WinCC OA LogViewer Extension deactivated');
+    logger.info('WinCC OA LogViewer Extension deactivated');
 }

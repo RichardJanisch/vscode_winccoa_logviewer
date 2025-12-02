@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { LogFileWatcher } from './logFileWatcher';
 import { LogEvent } from './logEvent';
+import { logger } from './logger';
 
 export class LogViewerPanel {
     public static currentPanel: LogViewerPanel | undefined;
@@ -12,6 +13,8 @@ export class LogViewerPanel {
 
     // ---------- Factory ----------
     public static createOrShow(extensionUri: vscode.Uri, logPath?: string) {
+        logger.info('createOrShow called', { logPath, hasCurrentPanel: !!LogViewerPanel.currentPanel });
+        
         // Always open in a new column to the side
         let column: vscode.ViewColumn;
         
@@ -35,16 +38,19 @@ export class LogViewerPanel {
 
         // Wenn es schon ein Panel gibt → nur zeigen
         if (LogViewerPanel.currentPanel) {
+            logger.info('Reusing existing panel', { column });
             LogViewerPanel.currentPanel._panel.reveal(column);
             
             // If new logPath provided, update watcher
             if (logPath) {
+                logger.info('Updating watcher with new log path', { logPath });
                 LogViewerPanel.currentPanel.startWatching(logPath);
             }
             return;
         }
 
         // Neues Panel erzeugen
+        logger.info('Creating new webview panel', { column });
         const panel = vscode.window.createWebviewPanel(
             'winccoaLogViewer',
             'WinCC OA Log Viewer',
@@ -62,6 +68,7 @@ export class LogViewerPanel {
     }
 
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, logPath?: string) {
+        logger.debug('LogViewerPanel constructor', { logPath });
         this._panel = panel;
         this._extensionUri = extensionUri;
 
@@ -72,17 +79,20 @@ export class LogViewerPanel {
         // Message Handler für File-Clicks
         this._panel.webview.onDidReceiveMessage(
             message => {
+                logger.debug('Received webview message', { command: message.command });
                 switch (message.command) {
                     case 'openFile':
                         this._openFile(message.filePath, message.line);
                         return;
                     case 'ready':
+                        logger.info('Webview ready');
                         // Webview is ready, start watching if logPath provided
                         if (logPath) {
                             this.startWatching(logPath);
                         }
                         return;
                     case 'setPaused':
+                        logger.info('Setting paused state', { paused: message.paused });
                         this.setPaused(message.paused);
                         return;
                 }
@@ -96,6 +106,7 @@ export class LogViewerPanel {
      * Set paused state of the watcher
      */
     public setPaused(paused: boolean): void {
+        logger.info('setPaused', { paused, hasWatcher: !!this._watcher });
         if (this._watcher) {
             if (paused) {
                 this._watcher.pause();
@@ -109,8 +120,11 @@ export class LogViewerPanel {
      * Start watching log directory
      */
     public async startWatching(logPath: string): Promise<void> {
+        logger.info('Starting to watch log directory', { logPath });
+        
         // Stop existing watcher if any
         if (this._watcher) {
+            logger.debug('Stopping existing watcher');
             this._watcher.stop();
         }
 
@@ -125,13 +139,16 @@ export class LogViewerPanel {
 
             await this._watcher.start();
             
+            logger.info('Successfully started watching logs', { logPath });
             vscode.window.showInformationMessage(`Watching logs in: ${logPath}`);
         } catch (error) {
+            logger.error('Failed to start watching logs', error, { logPath });
             vscode.window.showErrorMessage(`Failed to watch logs: ${error}`);
         }
     }
 
     private async _openFile(filePath: string, line?: number) {
+        logger.info('Opening file from log', { filePath, line });
         try {
             // Versuche die Datei zu öffnen
             const uri = vscode.Uri.file(filePath);
@@ -150,7 +167,9 @@ export class LogViewerPanel {
                     vscode.TextEditorRevealType.InCenter
                 );
             }
+            logger.info('Successfully opened file', { filePath, line });
         } catch (error) {
+            logger.error('Failed to open file', error, { filePath, line });
             vscode.window.showErrorMessage(`Could not open file: ${filePath}`);
         }
     }
@@ -201,10 +220,12 @@ export class LogViewerPanel {
     }
 
     public dispose() {
+        logger.info('Disposing LogViewerPanel');
         LogViewerPanel.currentPanel = undefined;
 
         // Stop watcher
         if (this._watcher) {
+            logger.debug('Disposing watcher');
             this._watcher.dispose();
             this._watcher = undefined;
         }
@@ -217,5 +238,6 @@ export class LogViewerPanel {
                 disposable.dispose();
             }
         }
+        logger.debug('LogViewerPanel disposed');
     }
 }

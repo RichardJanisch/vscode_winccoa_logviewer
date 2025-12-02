@@ -25,7 +25,18 @@
         "title": "Open WinCC OA LogViewer",
         "category": "WinCC OA"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "WinCC OA LogViewer",
+      "properties": {
+        "winccoaLogviewer.logLevel": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"],
+          "default": "info",
+          "description": "Log level for the extension output channel (debug shows all internal operations)"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
