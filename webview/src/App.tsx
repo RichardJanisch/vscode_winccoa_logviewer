@@ -59,6 +59,10 @@ function App() {
   const [allLogs, setAllLogs] = useState<LogEvent[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [showLogFileModal, setShowLogFileModal] = useState(false);
+  const [availableLogFiles, setAvailableLogFiles] = useState<string[]>([]);
+  const [selectedLogFiles, setSelectedLogFiles] = useState<Set<string>>(new Set());
+  const [logFileSearch, setLogFileSearch] = useState('');
 
   // Toggle pause state and notify extension
   const togglePause = () => {
@@ -81,6 +85,40 @@ function App() {
         command: 'openSettings'
       });
     }
+  };
+
+  // Open log file selection modal
+  const handleOpenLogFileModal = () => {
+    setShowSettingsDropdown(false);
+    setShowLogFileModal(true);
+  };
+
+  // Apply log file selection
+  const handleApplyLogFiles = () => {
+    setShowLogFileModal(false);
+    setLogFileSearch('');
+  };
+
+  // Toggle all log files
+  const handleSelectAllLogFiles = () => {
+    setSelectedLogFiles(new Set(availableLogFiles));
+  };
+
+  const handleDeselectAllLogFiles = () => {
+    setSelectedLogFiles(new Set());
+  };
+
+  // Toggle individual log file
+  const toggleLogFile = (logFile: string) => {
+    setSelectedLogFiles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(logFile)) {
+        newSet.delete(logFile);
+      } else {
+        newSet.add(logFile);
+      }
+      return newSet;
+    });
   };
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState<Set<LogSeverity>>(
@@ -173,6 +211,12 @@ function App() {
           // Add new log event to the top
           setAllLogs(prev => [message.event, ...prev]);
           break;
+        case 'availableLogFiles':
+          // Receive available log files from backend
+          setAvailableLogFiles(message.files);
+          // Select all by default
+          setSelectedLogFiles(new Set(message.files));
+          break;
       }
     };
 
@@ -198,6 +242,15 @@ function App() {
   // Gefilterte und gesuchte Logs
   const filteredLogs = useMemo(() => {
     return allLogs.filter(log => {
+      // Log file filter (based on identifier or source file)
+      if (selectedLogFiles.size > 0) {
+        // Check if log's identifier or source matches selected files
+        const logSource = log.identifier; // or extract from metadata if needed
+        if (!selectedLogFiles.has(logSource) && selectedLogFiles.size < availableLogFiles.length) {
+          return false;
+        }
+      }
+      
       // Severity Filter
       if (!severityFilter.has(log.severity)) return false;
       
@@ -214,7 +267,7 @@ function App() {
       
       return true;
     });
-  }, [allLogs, severityFilter, searchTerm]);
+  }, [allLogs, severityFilter, searchTerm, selectedLogFiles, availableLogFiles]);
 
   const handleClear = () => {
     setAllLogs([]);
@@ -448,6 +501,23 @@ function App() {
                     }}
                   >
                     Open Settings
+                  </div>
+                  <div
+                    onClick={handleOpenLogFileModal}
+                    style={{
+                      padding: '6px 8px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      borderRadius: '2px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--vscode-menu-selectionBackground)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    Select Log Files...
                   </div>
                 </div>
               </>
@@ -876,6 +946,249 @@ function App() {
           </div>
         );})}
       </div>
+
+      {/* Log File Selection Modal */}
+      {showLogFileModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => {
+            setShowLogFileModal(false);
+            setLogFileSearch('');
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--vscode-editor-background)',
+              border: '1px solid var(--vscode-panel-border)',
+              borderRadius: '4px',
+              width: '500px',
+              maxHeight: '600px',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '16px',
+                borderBottom: '1px solid var(--vscode-panel-border)',
+                fontWeight: 600,
+                fontSize: '14px'
+              }}
+            >
+              Select Log Files
+            </div>
+
+            {/* Search Box */}
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--vscode-panel-border)' }}>
+              <input
+                type="text"
+                placeholder="Search log files..."
+                value={logFileSearch}
+                onChange={(e) => setLogFileSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  backgroundColor: 'var(--vscode-input-background)',
+                  color: 'var(--vscode-input-foreground)',
+                  border: '1px solid var(--vscode-input-border)',
+                  borderRadius: '2px',
+                  fontSize: '13px',
+                  outline: 'none'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--vscode-focusBorder)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--vscode-input-border)';
+                }}
+              />
+            </div>
+
+            {/* Selection Controls */}
+            <div
+              style={{
+                padding: '8px 16px',
+                borderBottom: '1px solid var(--vscode-panel-border)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '12px'
+              }}
+            >
+              <div style={{ color: 'var(--vscode-descriptionForeground)' }}>
+                {selectedLogFiles.size} of {availableLogFiles.length} selected
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={handleSelectAllLogFiles}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    backgroundColor: 'var(--vscode-button-secondaryBackground)',
+                    color: 'var(--vscode-button-secondaryForeground)',
+                    border: 'none',
+                    borderRadius: '2px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryBackground)';
+                  }}
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={handleDeselectAllLogFiles}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    backgroundColor: 'var(--vscode-button-secondaryBackground)',
+                    color: 'var(--vscode-button-secondaryForeground)',
+                    border: 'none',
+                    borderRadius: '2px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryBackground)';
+                  }}
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+
+            {/* Checkbox List */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '8px 16px',
+                minHeight: '200px',
+                maxHeight: '400px'
+              }}
+            >
+              {availableLogFiles
+                .filter(file => file.toLowerCase().includes(logFileSearch.toLowerCase()))
+                .map(file => (
+                  <div
+                    key={file}
+                    style={{
+                      padding: '6px 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      fontSize: '13px'
+                    }}
+                    onClick={() => toggleLogFile(file)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedLogFiles.has(file)}
+                      onChange={() => toggleLogFile(file)}
+                      style={{
+                        marginRight: '8px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <span>{file}</span>
+                  </div>
+                ))}
+              {availableLogFiles.filter(file => file.toLowerCase().includes(logFileSearch.toLowerCase())).length === 0 && (
+                <div
+                  style={{
+                    padding: '32px',
+                    textAlign: 'center',
+                    color: 'var(--vscode-descriptionForeground)',
+                    fontSize: '13px'
+                  }}
+                >
+                  No log files found
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '12px 16px',
+                borderTop: '1px solid var(--vscode-panel-border)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '8px'
+              }}
+            >
+              <button
+                onClick={() => {
+                  setShowLogFileModal(false);
+                  setLogFileSearch('');
+                }}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  backgroundColor: 'var(--vscode-button-secondaryBackground)',
+                  color: 'var(--vscode-button-secondaryForeground)',
+                  border: 'none',
+                  borderRadius: '2px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryHoverBackground)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vscode-button-secondaryBackground)';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyLogFiles}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  backgroundColor: 'var(--vscode-button-background)',
+                  color: 'var(--vscode-button-foreground)',
+                  border: 'none',
+                  borderRadius: '2px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vscode-button-hoverBackground)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vscode-button-background)';
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

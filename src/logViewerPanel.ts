@@ -151,6 +151,15 @@ export class LogViewerPanel {
             await this._watcher.start();
             
             this._currentLogPath = logPath;
+            
+            // Send available log files to webview
+            const availableFiles = this._watcher.getAvailableLogFiles();
+            logger.debug('Sending available log files to webview', { count: availableFiles.length });
+            this._panel.webview.postMessage({
+                command: 'availableLogFiles',
+                files: availableFiles
+            });
+            
             logger.info('Successfully started watching logs', { logPath });
             vscode.window.showInformationMessage(`Watching logs in: ${logPath}`);
         } catch (error) {

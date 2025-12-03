@@ -21,6 +21,22 @@ export class LogFileWatcher {
     }
 
     /**
+     * Get list of available log files
+     */
+    public getAvailableLogFiles(): string[] {
+        logger.debug('Getting available log files', { logPath: this.logPath });
+        try {
+            const files = fs.readdirSync(this.logPath);
+            const logFiles = files.filter(file => file.endsWith('.log'));
+            logger.info('Found log files', { count: logFiles.length, files: logFiles });
+            return logFiles;
+        } catch (error) {
+            logger.error('Error getting available log files', error, { logPath: this.logPath });
+            return [];
+        }
+    }
+
+    /**
      * Start watching the log directory
      */
     public async start(): Promise<void> {
