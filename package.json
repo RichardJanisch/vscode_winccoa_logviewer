@@ -4,6 +4,7 @@
   "description": "LogViewer for WinCC OA - View and analyze log files in real-time",
   "version": "0.0.1",
   "publisher": "winccoa-tools",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
     "url": "https://github.com/your-username/winccoa_vscode_tools"
