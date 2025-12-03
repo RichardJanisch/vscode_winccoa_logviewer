@@ -5,7 +5,6 @@ webview/node_modules/
 # Build outputs
 dist/
 out/
-*.vsix
 webview/dist/
 
 # Logs
