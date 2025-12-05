@@ -73,6 +73,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@winccoa-tools-pack/npm-shared-library-core": "github:winccoa-tools-pack/npm-shared-library-core"
+    "@winccoa-tools-pack/npm-shared-library-core": "file:../npm-shared-library-core"
   }
 }
